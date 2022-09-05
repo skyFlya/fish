@@ -21,7 +21,7 @@ export class Main extends Component {
         uiManager.instance.showDialog(uiNameConstants.Home);
 
         //添加游戏层
-        
+        uiManager.instance.showDialog(uiNameConstants.FishFrame);
 
     }
 
