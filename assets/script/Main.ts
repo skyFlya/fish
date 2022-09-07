@@ -23,6 +23,8 @@ export class Main extends Component {
         //添加游戏层
         uiManager.instance.showDialog(uiNameConstants.FishFrame);
 
+
+        
     }
 
     update(deltaTime: number) {

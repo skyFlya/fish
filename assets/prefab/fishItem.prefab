@@ -120,8 +120,8 @@
     },
     "_contentSize": {
       "__type__": "cc.Size",
-      "width": 220,
-      "height": 220
+      "width": 450,
+      "height": 450
     },
     "_anchorPoint": {
       "__type__": "cc.Vec2",
@@ -157,7 +157,7 @@
     },
     "playTimes": -1,
     "premultipliedAlpha": false,
-    "_defaultArmatureIndexValue": 0,
+    "_defaultArmatureIndexValue": 16,
     "_dragonAsset": {
       "__uuid__": "9f4efbca-af49-4929-97f2-bf340189dd9a",
       "__expectedType__": "dragonBones.DragonBonesAsset"
@@ -166,8 +166,8 @@
       "__uuid__": "d9ff898f-dc37-4d42-abfd-22e9da3c94bf",
       "__expectedType__": "dragonBones.DragonBonesAtlasAsset"
     },
-    "_armatureName": "Sprite",
-    "_animationName": "",
+    "_armatureName": "fish_001",
+    "_animationName": "run",
     "_animationIndexValue": 0,
     "_defaultCacheModeValue": 0,
     "_timeScale": 1,
