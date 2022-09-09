@@ -1,7 +1,10 @@
 import { _decorator, Component, Node, Prefab, CCObject, UITransform, Widget, v2, Vec2, Canvas, dragonBones } from 'cc';
+import { eventName } from '../const/eventName';
 import { gameData } from '../const/gameData';
+import { clientEvent } from '../framework/clientEvent';
 import { poolManager } from '../framework/poolManager';
 import { fishItem } from '../item/fishItem';
+import { dataManage } from '../manage/dataManage';
 const { ccclass, property } = _decorator;
 
 @ccclass('fishFrame')
@@ -10,12 +13,11 @@ export class fishFrame extends Component {
     @property(Prefab)
     private fishPre: Prefab = null;
 
+    @property(Prefab)
+    private hechengSkePre: Prefab = null;
+
     @property(Node)
     private frame: Node = null;
-
-    @property(dragonBones.ArmatureDisplay)
-    private hechengSke: dragonBones.ArmatureDisplay = null;
-
 
     private screenWidth = 750;
     private screenHeight = 1334;
@@ -23,48 +25,55 @@ export class fishFrame extends Component {
     private framWidth = 750;
     private frameHeight = 1334;
 
+
+
+    private _fishId = 0;
+    public get fishId(): number {        
+        return this._fishId++;
+    }
+
+
     private curClickTarget: Node = null;                 //当前选中的鱼
     private curClickTargetData: gameData.fish = null;    //当前选中的鱼的数据
     private curCLickTargetArray: Node[] = [];            //当前选中的鱼群
 
-    private fishData: gameData.fish[] = [
-        { id: "1", lv: 1, gold: 10 },
-        { id: "2", lv: 1, gold: 10 },
-        { id: "3", lv: 1, gold: 10 },
-        { id: "4", lv: 2, gold: 20 },
-        { id: "5", lv: 2, gold: 20 },
-        { id: "6", lv: 2, gold: 20 },
-        { id: "7", lv: 3, gold: 30 },
-    ]
+    private fishData: gameData.fish[] = []
 
     onLoad() {
         this.frame.on(Node.EventType.TOUCH_START, this.touchStart, this);
         this.frame.on(Node.EventType.TOUCH_MOVE, this.touchMove, this);
         this.frame.on(Node.EventType.TOUCH_END, this.touchEnd, this);
-        this.frame.on(Node.EventType.TOUCH_CANCEL, this.touchEnd, this);
-
-        this.hechengSke.node.active = false;
-        this.hechengSke.node.setScale(gameData.fishScale, gameData.fishScale);
+        this.frame.on(Node.EventType.TOUCH_CANCEL, this.touchEnd, this);        
 
         this.node.getComponent(Widget).updateAlignment();
-        this.screenWidth = this.getComponent(UITransform).width;
-        this.screenHeight = this.getComponent(UITransform).height;        
+        this.screenWidth = screen.width * 2;
+        this.screenHeight = screen.height * 2;                
 
         this.frame.getComponent(Widget).updateAlignment();
         this.framWidth = this.frame.getComponent(UITransform).width;
         this.frameHeight = this.frame.getComponent(UITransform).height;        
     }
 
-    start() {
-        this.initFrame();
+    onEnable(){        
+        clientEvent.on(eventName.FISH_UPDATE, this.updateFish, this);
+    }
+
+    onDisable(){
+        clientEvent.off(eventName.FISH_UPDATE, this.updateFish, this);
+    }
+
+    start() {     
+         this.initFrame();
     }
 
     initFrame() {
-        let fishData = this.fishData;    
-        for (let i = 0; i < fishData.length; i++) {
-            let fish = poolManager.instance.getNode(this.fishPre, this.frame);
-            fish.getComponent(fishItem).init(fishData[i], { width: this.framWidth, height: this.frameHeight });
-        }
+        /** */
+        this.addFish(1);
+        this.addFish(1);
+        this.addFish(1);
+        this.addFish(1);        
+        /** */        
+
         setInterval(() => {
             this.checkIndex();
         }, 1000)
@@ -122,13 +131,9 @@ export class fishFrame extends Component {
      * @param target 目标鱼
      * @returns 
      */
-    checkIsInFrame(touchLoc: Vec2, target: Vec2) {
-        let padX = 100;
-        let padY = 100;
-
-        let conditionWidth = target.x - padX < touchLoc.x && target.x + padX > touchLoc.x;
-        let conditionHeight = target.y - padY< touchLoc.y && target.y + padY > touchLoc.y;
-
+    checkIsInFrame(touchLoc: Vec2, target: Vec2) {    
+        let conditionWidth = Math.abs(touchLoc.x - target.x) < 100;
+        let conditionHeight =  Math.abs(touchLoc.y - target.y) < 100;        
         return conditionWidth && conditionHeight;
     }
 
@@ -141,7 +146,7 @@ export class fishFrame extends Component {
             let touchLoc = event.getLocation();
             touchLoc.x -= this.screenWidth / 2;
             touchLoc.y -= this.screenHeight / 2;
-            this.curClickTarget.setPosition(touchLoc.x, touchLoc.y)            
+            this.curClickTarget.setPosition(touchLoc.x, touchLoc.y)
         }
     }
 
@@ -156,18 +161,24 @@ export class fishFrame extends Component {
             touchLoc.y -= this.screenHeight / 2;
 
             let curCLickTargetArray = this.curCLickTargetArray;
-            let curClickId = this.curClickTarget.getComponent(fishItem).getFishData().id;
+            let curTargetData = this.curClickTarget.getComponent(fishItem).getFishData();
+            let curClickId = curTargetData.clientId;            
 
             for (let i = 0; i < curCLickTargetArray.length; i++) {
                 let x = curCLickTargetArray[i].position.x;
                 let y = curCLickTargetArray[i].position.y;
-                let fishData = curCLickTargetArray[i].getComponent(fishItem).getFishData();
-                if (this.checkIsInFrame(touchLoc, new Vec2(x, y)) && fishData.id != curClickId) {        //寻找可以合成的鱼，除了自已
+                let fishData = curCLickTargetArray[i].getComponent(fishItem).getFishData();               
+
+                if (this.checkIsInFrame(touchLoc, new Vec2(x, y)) && fishData.clientId != curClickId && this.curClickTarget) {        //寻找可以合成的鱼，除了自已
                     console.log("合成");
-                    this.curClickTarget.destroy();
-                    curCLickTargetArray[i].destroy();
+                    poolManager.instance.putNode(this.curClickTarget);
+                    poolManager.instance.putNode(curCLickTargetArray[i]);
+
+                    this.removeFish(curCLickTargetArray[i], fishData);
+                    this.removeFish(this.curClickTarget, curTargetData);
+
                     this.curClickTarget = null;
-                    this.playSynthesisAnimation(touchLoc.x, touchLoc.y);
+                    this.playSynthesisAnimation(Number(curTargetData.lv) + 1, touchLoc.x, touchLoc.y);                    
                 }
                 else {
                     curCLickTargetArray[i].getComponent(fishItem).setSate(gameData.fishState.move);
@@ -183,28 +194,72 @@ export class fishFrame extends Component {
      * @param x 动画X
      * @param y 动画Y
      */
-    public async playSynthesisAnimation(x, y) {
-        this.hechengSke.node.active = true;
-        this.hechengSke.playAnimation("hecheng");
-        // Controller.Sound.play(Controller.SOUNDS.HECHENG);
+    public playSynthesisAnimation(lv, x, y) {
+        // this.hechengSke.node.active = true;
+        // this.hechengSke.playAnimation("hecheng", 1);
+        // // Controller.Sound.play(Controller.SOUNDS.HECHENG);
 
-        const length = this.hechengSke.armature().getSlot("fish_001_02").displayList.length;
-        this.hechengSke.node.setPosition(x, y);
-        this.hechengSke.armature().getSlot('fish_001_02').displayIndex = length - this.curClickTargetData.lv;
-        this.hechengSke.armature().getSlot('fish_001_01').displayIndex = length - this.curClickTargetData.lv;
-        this.hechengSke.on(dragonBones.EventObject.LOOP_COMPLETE, () => {
-            this.hechengSke.node.active = false;
-            console.log("播放完成");
-        }, this);
+        // const length = this.hechengSke.armature().getSlot("fish_001_02").displayList.length;
+        // this.hechengSke.node.setPosition(x, y);
+        // this.hechengSke.armature().getSlot('fish_001_02').displayIndex = length - this.curClickTargetData.lv;
+        // this.hechengSke.armature().getSlot('fish_001_01').displayIndex = length - this.curClickTargetData.lv;
+        // this.hechengSke.on(dragonBones.EventObject.COMPLETE, () => {            
+        //     this.hechengSke.node.active = false;
+        //     console.log("播放完成");
+        // }, this);
+
+        let hechengSkePre = poolManager.instance.getNode(this.hechengSkePre, this.node);        
+        hechengSkePre.setScale(gameData.fishScale, gameData.fishScale);    
+        let hechengSke = hechengSkePre.getComponent(dragonBones.ArmatureDisplay);
+        hechengSke.armatureName = "hecheng"
+        hechengSke.playAnimation("hecheng", 1);        
+
+        const length = hechengSke.armature().getSlot("fish_001_02").displayList.length;
+        hechengSke.node.setPosition(x, y);
+        hechengSke.armature().getSlot('fish_001_02').displayIndex = length - this.curClickTargetData.lv;
+        hechengSke.armature().getSlot('fish_001_01').displayIndex = length - this.curClickTargetData.lv;       
+        setTimeout(() => {
+            poolManager.instance.putNode(hechengSkePre);  
+            this.addFish(lv, new Vec2(x, y))             
+        }, 800);
     }
 
+    private createFish(fishData, pos?:Vec2) {        
+        fishData.clientId = this.fishId;
 
-    private removeFishData(id) {
-        //let fishArr
+        let fish = poolManager.instance.getNode(this.fishPre, this.frame);
+        if(!pos){
+            let areawidth = this.framWidth / 2;
+            let areaHeight = this.frameHeight / 2;
+            pos = new Vec2();
+            pos.x = Math.floor(Math.random()*(areawidth * 2 + 1) - areawidth);
+            pos.y = Math.floor(Math.random()*(areaHeight * 2 + 1) - areaHeight);
+        }
+        fish.setPosition(pos.x, pos.y);
+        fish.getComponent(fishItem).init(fishData, { width: this.framWidth, height: this.frameHeight });
     }
 
-    update(deltaTime: number) {
-
+    private addFish(lv, pos?:Vec2){
+        let fishData = dataManage.instance.getFishData(lv);
+        this.fishData[this.fishData.length] = fishData;
+        this.createFish(fishData, pos);
     }
+
+    private removeFish(target, clientId) {
+        poolManager.instance.putNode(target);
+        for(let i = 0; i < this.fishData.length; i++){
+            if(this.fishData[i].clientId == clientId){
+                this.fishData.splice(i, 1);
+                return;
+            }
+        }
+    }
+
+    private updateFish(data){        
+        if(data.type == "add"){
+            this.addFish(1);
+        }
+    }
+
 }
 

@@ -1,4 +1,6 @@
 import { _decorator, Component, Node } from 'cc';
+import { eventName } from '../const/eventName';
+import { clientEvent } from '../framework/clientEvent';
 const { ccclass, property } = _decorator;
 
 @ccclass('home')
@@ -21,7 +23,9 @@ export class home extends Component {
 
 
     buyFish(){
-
+        clientEvent.dispatchEvent(eventName.FISH_UPDATE, {
+            type: "add",
+        });
     }
 
 

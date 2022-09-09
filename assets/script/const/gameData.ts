@@ -1,12 +1,23 @@
 export namespace gameData{
     export interface fish{
-        /**id */
-        id:string,
-        /**等级 */
-        lv:number,
-        /**每秒产生的金币 */
-        gold:number,
-    }
+        /**client */
+        clientId:number,        
+        id: number,
+        name: string,
+        lv: number,
+        spc: number,
+        gold: number,
+        reduce: number,
+        red: number,
+        show: number,
+        sellGold: number,
+        imgName: string,
+        aniScale: number,
+        produce: number,
+        jinPb: number,
+        heChengRed: number,
+        initRed: number
+    }    
 
     export enum fishState {
         move = 1,
@@ -15,6 +26,5 @@ export namespace gameData{
 
     export const fishScale = 0.7;
     export const fishSKeWidth = 450 * fishScale;
-    export const fishSKeHeight = 450 * fishScale;    
-
+    export const fishSKeHeight = 450 * fishScale;
 }
